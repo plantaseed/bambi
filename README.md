@@ -35,7 +35,7 @@ spec:
        app: manager
    spec:
      containers:
-     - image: dockerhub.io/skira-bambi/manager:latest
+     - image: dockerhub.io/bambiliu/manager:latest
        name: manager
        ports:
        - containerPort: 5000
@@ -79,7 +79,7 @@ Manager will use the base image located in dockerhub.io/skira-bambi/code-server:
 This can be modified to install other libraies to be standard for all users.
 Make a dockerfile in the following form
 ```dockerfile
-FROM dockerhub.io/skira-bambi/code-server:latest
+FROM dockerhub.io/bambiliu/code-server:latest
 RUN sudo apt install -y "some library that you need"
 #other setup that you might need 
 ```
