@@ -1,0 +1,84 @@
+#! /bin/bash
+
+
+while test $# -gt 0; do
+    case "$1" in
+        -a)
+            echo Enter port connection on format [Localhost]:[Remote]
+            read ports
+            export ports
+            service=$2
+            export service
+
+            # Builds the code once to cache the container layers for npm install --------------------------------------
+            # Get variable information
+            config=`python3 -c "import yaml; print(yaml.load(open('/home/coder/.startup/config.yaml')))"`
+            projID=`python3 -c "print($config['config']['project']['id'])"`
+            buildname="gcr.io/$projID/$service"
+            tag=`python3 -c "import time; print(time.ctime().replace(' ', '_').replace(':','-'))"`
+            #Get git repo name
+            gitrepo=`python3 -c "print($config['config']['project']['git_url'])"`
+            dir_=`python3 -c "print('$gitrepo'.split('/')[-1].split('.git')[0])"`
+
+            # Build the container
+            docker build -t "$buildname:$tag" "/home/coder/project/$dir_/$service"
+            #---------------------------------------------------------------------------------------------------------
+            telepresence --logfile "/home/coder/.startup/telepresence.log" --swap-deployment $service --run bash extr_bambi
+            break;
+        ;;
+        -h)
+            echo " "
+            echo "Hot reload the docker container:"
+            echo "bambi-dev -a <SERVICENAME>"
+            echo " "
+            echo "Hot reload inside the container: (requires e.g. Nodemon)"
+            echo "bambi-dev <SERVICENAME>"
+            echo " "
+            break;
+        ;;
+        *)
+            SRV=$1
+            # Get variable information
+            config=`python3 -c "import yaml; print(yaml.load(open('/home/coder/.startup/config.yaml')))"`
+            projID=`python3 -c "print($config['config']['project']['id'])"`
+            buildname="gcr.io/$projID/$SRV"
+            tag=`python3 -c "import time; print(time.ctime().replace(' ', '_').replace(':','-'))"`
+            python3 -c "a = $config; a['services']['$service']['latest_tag']='$tag';import yaml; yaml.dump(a, open('/home/coder/.startup/config.yaml', 'w'), default_flow_style=False);"
+
+            #Get git repo name
+            gitrepo=`python3 -c "print($config['config']['project']['git_url'])"`
+            dir_=`python3 -c "print('$gitrepo'.split('/')[-1].split('.git')[0])"`
+
+            # Build the container
+            docker build -t "$buildname:$tag" "/home/coder/project/$dir_/$SRV"
+
+            #Path to src volume to mount in container
+            srcPath="/home/coder/project/$dir_/$SRV"
+
+            #picks out correct dictionary to check if the service has a mountPath
+            dictKeys=`python3 -c "print($config['services']['$SRV'])"`
+            hasMountPath=`python3 -c "print('true') if 'mountpath' in $dictKeys.keys() else print('false')"`
+
+            if [ "$hasMountPath" == "true" ]
+            then
+              # Path where volume shall be mounted in the container
+              mountPath=`python3 -c "print($config['services']['$SRV']['mountpath'])"`
+            else
+              echo ""
+              echo "Your service dosen't have a mountpath specified in the config.yaml file."
+              echo "Add a mountpath to the config.yaml file or use: bambi-dev -a $SRV"
+              echo ""
+              break;
+            fi
+            # Telepresence and mount the service folder into the container
+            telepresence --logfile "/home/coder/.startup/telepresence.log" \
+                    --swap-deployment $SRV:$SRV \
+                    --docker-run \
+                    --rm -it \
+                    -e SRV=$SRV \
+                    -v $srcPath:$mountPath \
+                    $buildname:$tag
+            break;
+        ;;
+    esac
+done

@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+#Bambi main hook
+#
+
+import sys
+from os import path
+
+sys.path.append('./')
+
+import python_deploy
+import subprocess
+from threading import Thread
+import yaml as yaml
+import time ,os, signal
+
+
+with open("../../.startup/config.yaml") as f:
+	config = yaml.load(f)
+prod_branch = config["config"]["project"]["prod_cluster"]["git_branch"].strip()
+dev_branch = config["config"]["project"]["dev_cluster"]["git_branch"].strip()
+process = subprocess.Popen(['git', 'symbolic-ref', '--short', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE) #check if image is already pushed  
+stdout, stderr = process.communicate()
+branch = stdout.decode("utf-8").strip()
+print(branch)
+if branch == prod_branch:
+    pass
+    #check
+    #checkout
+elif branch == dev_branch:
+    pass
+    #check
+    #checkout
+else:
+    print("branch not recognised will skip")
+    exit(0)
+#if a service has no tag it is assumed to not have been changed during this commit
+services = config["services"].keys()
+manager = python_deploy.bambiDeploy("./", services)
+#run unittests
+succes_unit = None 
+def run_unit_test():
+    global succes_unit
+    try:
+        unit_tests = subprocess.run('./unittest')
+    except:
+        print("test file missing, or not working")
+        succes_unit = 1
+        return
+    succes_unit = unit_tests.returncode
+Thread(target=run_unit_test).start()
+
+#get all services that have files staged for the commit
+#Teleprecense all services that needs to be runned, tag with date of current time if they need to be built. 
+services = manager.get_service_changes()
+print(services)
+for service in services.keys():
+    image = 'gcr.io/'+ config["config"]["project"]["id"] +'/' + service + ':'
+    if config["services"][service]["latest_tag"] == "" or time.strptime(config["services"][service]["latest_tag"].replace("_", " ").replace("-",":")) < time.strptime(services[service]):
+        #build and run, TAG current time
+        image = 'gcr.io/'+ config["config"]["project"]["id"] +'/' + service + ':'
+        t = time.ctime().replace(" ", "_").replace(":","-")
+        if config["services"][service]["latest_tag"] == "" and False:
+            #use cache from gcr
+            p1 = subprocess.Popen(['gcloud', 'container', 'images', 'list-tags', image[0:-1], ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p2 = subprocess.Popen([ 'sed', '-n', '2p',], stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p3 = subprocess.Popen(['awk', '{print $2}'], stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            stdout, stderr = p3.communicate()
+            tag = str(stdout)[2:-3]
+
+           
+            process = subprocess.Popen(['docker', 'pull', image+tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            process = subprocess.Popen(['docker', 'build', '--cache-from', image+tag, '-t', image+t, service], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+        else:
+            process = subprocess.Popen(['docker', 'build', '-t', image+t, service], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+        #TODO verify succes
+        if stderr:
+            print("failed to build: " +image + "err:"+ str(stderr)) 
+            exit(1)
+        config["services"][service]["latest_tag"] = t
+        with open("../../.startup/config.yaml", "w") as f:
+            yaml.dump(config, f, default_flow_style=False)
+   
+    print(image+config["services"][service]["latest_tag"])
+    #run teleprecense
+    p = subprocess.Popen(["telepresence", "--swap-deployment", service, "--docker-run", "--rm",image+config["services"][service]["latest_tag"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid,stdin=subprocess.PIPE)  
+    for line in p.stdout:
+        a=line
+        p.returncode
+        break
+time.sleep(2)
+#run integration tests
+succes_integration = None 
+def run_integration_test():
+    global succes_integration
+    try:    
+        unit_tests = subprocess.run('./integrationtest')
+    except:
+        print("test file missing, or not working")
+        succes_integration = 1
+        return
+    succes_integration = unit_tests.returncode
+    return
+
+while succes_unit == None:
+    pass
+if succes_unit == 0:
+    Thread(target=run_integration_test).start()
+else:
+    exit(succes_unit)
+while succes_integration == None:
+    pass
+os.kill(p.pid, signal.SIGTERM)
+exit(succes_integration)

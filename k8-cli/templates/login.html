@@ -1,0 +1,25 @@
+
+<html>
+  <head>
+    <title>Flask Intro - login page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="static/bootstrap.min.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+    <div class="container">
+      {% if url %}
+      <h1><a href= {{ url }} target="_blank">Autheticate Manager</a></h1>
+      {% endif %}
+      <h1>Please follow link above then enter token below</h1>
+      <br>
+      <form action="" method="post">
+         <input type="Token" placeholder="Token" name="Token" value="{{
+          request.form.token }}">
+        <input class="btn btn-default" type="submit" value="Submit">
+      </form>
+      {% if error %}
+        <p class="error"><strong>Error:</strong> {{ error }}</p>
+      {% endif %}
+    </div>
+  </body>
+</html>

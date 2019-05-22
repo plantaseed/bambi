@@ -1,0 +1,45 @@
+#! /bin/bash
+
+trap cleanup EXIT
+
+function cleanup {
+  docker kill "hotreload${service,,}"
+}
+
+# Get variable information
+config=`python3 -c "import yaml; print(yaml.load(open('/home/coder/.startup/config.yaml')))"`
+projID=`python3 -c "print($config['config']['project']['id'])"`
+buildname="gcr.io/$projID/$service"
+tag=`python3 -c "import time; print(time.ctime().replace(' ', '_').replace(':','-'))"`
+# Get git repo name
+gitrepo=`python3 -c "print($config['config']['project']['git_url'])"`
+dir_=`python3 -c "print('$gitrepo'.split('/')[-1].split('.git')[0])"`
+
+python3 -c "a = $config; a['services']['$SRV']['latest_tag']='$tag';import yaml; yaml.dump(a, open('/home/coder/.startup/config.yaml', 'w'), default_flow_style=False);"
+# Build the containers
+docker kill "hotreload${service,,}"
+docker build -t "$buildname:$tag" "/home/coder/project/$dir_/$service"
+docker run --rm -it -d --name="hotreload${service,,}" -p $ports  "$buildname:$tag"
+echo ""
+echo "---------------------------------------"
+echo "Click Ctrl+c to exit"
+echo "---------------------------------------"
+echo ""
+
+# Choose the directory to be monitered for code changes.
+MONITORDIR="/home/coder/project/$dir_/$SRV"
+while :
+do
+       # Wait for changes to the directory
+       inotifywait  -r -e modify ${MONITORDIR}
+       # Kill the current container running on the selected port, rebuild,retag and rerun.
+       docker kill "hotreload${service,,}"
+       tag=`python3 -c "import time; print(time.ctime().replace(' ', '_').replace(':','-'))"`
+       docker build -t "$buildname:$tag" "/home/coder/project/$dir_/$service"
+       docker run --rm -it -d --name="hotreload${service,,}" -p $ports  "$buildname:$tag"
+       echo ""
+       echo "---------------------------------------"
+       echo "Click Ctrl+c to exit"
+       echo "---------------------------------------"
+       echo ""
+done

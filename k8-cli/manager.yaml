@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ labels:
+   app: manager
+ name: manager
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     app: manager
+ template:
+   metadata:
+     labels:
+       app: manager
+   spec:
+     containers:
+     - image: gcr.io/skira-bambi-0001/manager:latest
+       name: manager
+       ports:
+       - containerPort: 5000
+       resources: {}
+       imagePullPolicy: IfNotPresent
+     hostname: manager
+     restartPolicy: Always

@@ -1,0 +1,22 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+flake8 = "*"
+pylint = "*"
+pep8 = "*"
+autopep8 = "*"
+rope = "*"
+pytest = "*"
+
+[packages]
+kubernetes = "*"
+kubernetes-py = "*"
+google-cloud-storage = "*"
+flask = "*"
+pyopenssl = "*"
+
+[requires]
+python_version = "3.7"
