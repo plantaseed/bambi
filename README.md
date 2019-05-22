@@ -1,21 +1,21 @@
 # Prerequsites
 1. A cluster used for development on GCP
-2. Optional: A production cluster which is a copy of the development kluster.
+2. Optional: A production cluster which is a copy of the development cluster.
 3. Open development kluster firewall to accept tcp connections
 4. Allow full access to all Cloud APIs on development kluster
-5. ??Mabye allow legacy authorization. 
+5. Mabye allow legacy authorization, you might need to. 
 6. Open a gcr.io registry.
 
 # Setup
 ## Overview
-To get the system working you have to depoly and expose the Bambi manager to you development kluster.
-You also have to define a config descrbing your system and kluster.
+To get the system working you have to deploy and expose the Bambi manager to you development kluster.
+You also have to define a config describing your system and cluster.
 
 ## Manager.
 This will describe the setup of Bambi manager.
 
 ### Deployment
-You have to deploy the manager image to you cluster.
+You have to deploy the manager image to your cluster.
 A example depolyment config:
 ``` YAML
 apiVersion: apps/v1
@@ -47,7 +47,7 @@ spec:
 Don't forget to expose the service, either add it to you ingress och just start a loadbalancer.
 
 ### Config
-When you first open the manager you should first enter a config file, it should have the following form.
+When you first open the manager you should first enter a config file, it should have the following format.
 ``` Yaml
 services:
   #below list the names of your micro services
