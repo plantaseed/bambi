@@ -1,4 +1,4 @@
-# Prerequsites
+# Prerequisites
 1. A cluster used for development on GCP
 2. Optional: A production cluster which is a copy of the development cluster.
 3. Open development kluster firewall to accept tcp connections
