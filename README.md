@@ -8,7 +8,7 @@
 
 # Setup
 ## Overview
-To get the system working you have to deploy and expose the Bambi manager to you development kluster.
+To get the system working you have to deploy and expose the Bambi manager to you development cluster.
 You also have to define a config describing your system and cluster.
 
 ## Manager.
@@ -16,7 +16,7 @@ This will describe the setup of Bambi manager.
 
 ### Deployment
 You have to deploy the manager image to your cluster.
-A example depolyment config:
+An example deployment config:
 ``` YAML
 apiVersion: apps/v1
 kind: Deployment
@@ -35,7 +35,7 @@ spec:
        app: manager
    spec:
      containers:
-     - image: dockerhub.io/bambiliu/manager:latest
+     - image: bambiliu/manager:latest
        name: manager
        ports:
        - containerPort: 5000
@@ -43,6 +43,10 @@ spec:
        imagePullPolicy: IfNotPresent
      hostname: manager
      restartPolicy: Always
+```
+Navigate to the k8-cli folder and deploy the manager.
+```console
+user@computer:~/k8-cli$ kubectl apply -f manager.yaml
 ```
 Don't forget to expose the service, either add it to you ingress och just start a loadbalancer.
 
