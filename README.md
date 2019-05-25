@@ -48,7 +48,7 @@ Navigate to the k8-cli folder and deploy the manager.
 ```console
 user@computer:~/k8-cli$ kubectl apply -f manager.yaml
 ```
-Don't forget to expose the service, either add it to you ingress och just start a loadbalancer.
+Don't forget to expose the service, either add it to your ingress or just start a loadbalancer.
 
 ### Config
 When you first open the manager you should first enter a config file, it should have the following format.
