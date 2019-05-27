@@ -3,8 +3,6 @@ FROM ubuntu:18.04
 #RUN mkdir /root/certs
 #RUN openssl req -x509 -nodes -days 365 -subj "/C=SE/ST=Ostergotland/L=Linkoping/O=Skira AB/OU=Bambi" -newkey rsa:2048 -keyout /root/certs/MyKey.key -out /root/certs/MyCertificate.crt
 
-
-
 RUN apt-get update
 RUN apt-get install -y python3-pip
 RUN apt install -y curl
@@ -35,10 +33,6 @@ COPY ./startup.py ./
 COPY ./cli_std_lib.py ./
 COPY ./templates ./templates
 COPY ./static ./static
-COPY ./certs_and_configs ./certs_and_configs
-COPY ./config.yaml ./
 
 
 ENTRYPOINT ["python3","startup.py"]
-
-# NOTE: Start
