@@ -15,7 +15,7 @@ spec:
        app: manager
    spec:
      containers:
-     - image: gcr.io/skira-bambi-0001/manager:latest
+     - image: bambiliu/manager:latest
        name: manager
        ports:
        - containerPort: 5000
