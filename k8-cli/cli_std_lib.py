@@ -19,7 +19,7 @@ class Bambi:
         self.api_client = client.CoreV1Api(client.ApiClient())
         self.app_api_client = client.AppsV1Api(client.ApiClient())
         self.name = "user"
-        self.namespace = "default"  # Name of cluster
+        self.namespace = "default"
         self.app = "code-server"  # Name of app
         self.image = "bambiliu/code-server:latest"
 
@@ -233,7 +233,7 @@ class Bambi:
                     self.user_config["config"]["project"]["id"] + \
                     '/custom_code_server:' + username
                 break
-            elif "base" in tag_list[i]["tags"] and not custom:
+            elif "base" in tag_list[i]["tags"]:
                 self.image = "gcr.io/" + \
                     self.user_config["config"]["project"]["id"] + \
                     "/custom_code_server:base"
