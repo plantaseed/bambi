@@ -1,7 +1,6 @@
 import os
 import subprocess
-import time
-from typing import Dict, List
+from typing import List
 import json
 
 import yaml
@@ -15,32 +14,36 @@ class Bambi:
     def __init__(self):
         """ Will set up fetch credentials and configs """
 
-        self._setup_gcloud(True)
+        self._setup_gcloud()
         self.client = client.CoreV1Api()
         self.api_client = client.CoreV1Api(client.ApiClient())
         self.app_api_client = client.AppsV1Api(client.ApiClient())
         self.name = "user"
-        self.namespace = "default" 
+        self.namespace = "default"  # Name of cluster
         self.app = "code-server"  # Name of app
-        self.image = "gcr.io/" + self.user_config["config"]["project"]["id"] + "/custom_code_server:base"
+        self.image = "bambiliu/code-server:latest"
 
     def _setup_gcloud(self, local_dev=False):
         """ Will do the necessary terminal commands to setup gcloud. """
 
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getcwd() + \
-           "/certs_and_configs/key.json"
+            "/certs_and_configs/key.json"
         self.user_config = yaml.safe_load(open('config.yaml'))
 
-        p = subprocess.Popen(['gcloud', 'config','set', 'project', self.user_config["config"]["project"]["id"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['gcloud', 'config', 'set', 'project', self.user_config["config"]
+                              ["project"]["id"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
 
-        p = subprocess.Popen(['gcloud', 'config','set', 'compute/zone', self.user_config["config"]["project"]["zone"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['gcloud', 'config', 'set', 'compute/zone', self.user_config["config"]
+                              ["project"]["zone"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
 
-        p = subprocess.Popen(['gcloud', 'auth', 'activate-service-account', '--key-file=certs_and_configs/key.json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['gcloud', 'auth', 'activate-service-account',
+                              '--key-file=certs_and_configs/key.json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
 
-        p = subprocess.Popen(['gcloud', 'container', 'clusters', 'get-credentials', self.user_config["config"]["project"]["dev_cluster"]["name"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(['gcloud', 'container', 'clusters', 'get-credentials', self.user_config["config"]
+                              ["project"]["dev_cluster"]["name"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
 
         if not local_dev:
@@ -52,7 +55,7 @@ class Bambi:
         """ Will return the new name for the workspace. """
 
         return self.app
-        
+
     def _get_address_from_service(self, service) -> str:
         """ Will retrive the port and ip-address from the V1ServiceList object """
         port = ""
@@ -65,6 +68,12 @@ class Bambi:
         ip = self.client.list_node().items[0].status.addresses[1].address
         print("ip= " + ip + ", port = " + port)
         return ip + ":" + port
+
+    def upload_image_to_gcp(self) -> None:
+        """ Will call scripts/upload_image.sh to upload the custom
+        dockerfile to gcr. """
+
+        subprocess.call("scripts/upload_image.sh")
 
     def get_password_to_workspace(self) -> str:
         """ Will print the password to the users workspace. """
@@ -142,7 +151,7 @@ class Bambi:
         body.spec = spec
 
         try:
-            resp = self.api_client.create_namespaced_service(
+            self.api_client.create_namespaced_service(
                 self.namespace, body, pretty=True)
 
         except ApiException as e:
@@ -164,7 +173,8 @@ class Bambi:
         container.ports = [port]
 
         container.command = ["/bin/sh"]
-        container.args = ["./../.startup/startup.sh", username, password, str(yaml.safe_load(open('config.yaml'))), str(open("certs_and_configs/key.json").read())]
+        container.args = ["./../.startup/startup.sh", username, password, str(
+            yaml.safe_load(open('config.yaml'))), str(open("certs_and_configs/key.json").read())]
 
         containers = [container]
 
@@ -198,7 +208,8 @@ class Bambi:
     def _check_if_workspace_exist(self) -> str:
         for item in self.client.list_namespaced_service("default").items:
             if self.name in item.metadata.name:
-                ip = self.client.list_node().items[0].status.addresses[1].address
+                ip = self.client.list_node(
+                ).items[0].status.addresses[1].address
                 port = str(item.spec.ports[0].node_port)
                 return ip + ":" + port
         return ""
@@ -207,20 +218,25 @@ class Bambi:
         """ Will create a new workspace for a user and return the password
         and address to the workspace.
 
-        Will scale up the kubernetes cluster to meet the demand of the new workspace."""
+        Will scale up the kubernetes cluster to meet the demand of the new
+        workspace."""
 
-        p = subprocess.Popen(['gcloud', 'container', 'images', 'list-tags', 'gcr.io/' + self.user_config["config"]["project"]["id"]+ '/custom_code_server', '--format=json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        workname = self.user_config["config"]["project"]["id"]
+        p = subprocess.Popen(['gcloud', 'container', 'images', 'list-tags', 'gcr.io/' + workname +
+                              '/custom_code_server', '--format=json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         tag_list = json.loads(stdout.decode("utf-8"))
 
         for i in range(len(tag_list)):
             if username in tag_list[i]["tags"]:
-                self.image = 'gcr.io/' + self.user_config["config"]["project"]["id"]+ '/custom_code_server:' + username
+                self.image = 'gcr.io/' + \
+                    self.user_config["config"]["project"]["id"] + \
+                    '/custom_code_server:' + username
                 break
-            elif "base" in tag_list[i]["tags"] and custom == False:
-                self.image = "gcr.io/" + self.user_config["config"]["project"]["id"]+ "/custom_code_server:base"
-
-
+            elif "base" in tag_list[i]["tags"] and not custom:
+                self.image = "gcr.io/" + \
+                    self.user_config["config"]["project"]["id"] + \
+                    "/custom_code_server:base"
 
         print("image = ", self.image)
 
