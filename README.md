@@ -1,8 +1,8 @@
 # Prerequisites
 1. A cluster used for development on GCP
 2. Optional: A production cluster which is a copy of the development cluster.
-3. Open development kluster firewall to accept tcp connections
-4. Allow full access to all Cloud APIs on development kluster
+3. Open development cluster firewall to accept tcp connections
+4. Allow full access to all Cloud APIs on development cluster
 5. Mabye allow legacy authorization, you might need to. 
 6. Open a gcr.io registry.
 
@@ -87,7 +87,7 @@ FROM dockerhub.io/bambiliu/code-server:latest
 RUN sudo apt install -y "some library that you need"
 #other setup that you might need 
 ```
-You can then build and push this to you gcr under the tag custom_code_server:base and that will be used as base instead.
+You can then build and push this to you gcr under the tag `custom_code_server:base` and that will be used as base instead.
 
 ## Testing
 During a git commit the system will run two test files, a file called unit test and one called integration test.
